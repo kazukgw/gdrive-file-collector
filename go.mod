@@ -1,4 +1,4 @@
-module github.com/kazukgw/gdrive-crawler
+module github.com/kazukgw/gdrive-file-collector
 
 go 1.16
 

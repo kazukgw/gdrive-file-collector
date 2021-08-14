@@ -56,7 +56,7 @@ func (h *HTTPRequestHandler) CollectFiles(w http.ResponseWriter, r *http.Request
 		return
 	}
 	json.Unmarshal(dat, &req)
-	f, err := h.Collector.DriveClient.GetFile(ctx, req.FolderID)
+	f, err := h.Collector.DriveClient.GetFile(ctx, req.FolderID, []string{})
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Printf("Error HTTPRequestHandler.CollectFiles: %v", err)
