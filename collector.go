@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"time"
+	"strings"
 
 	"cloud.google.com/go/bigquery"
 	cloudtasks "cloud.google.com/go/cloudtasks/apiv2"
@@ -51,9 +51,14 @@ func NewCollector(ctx context.Context, config CollectorConfig) (*Collector, erro
 	return &Collector{driveClient, queueCli, repo}, nil
 }
 
-func (c *Collector) collect(ctx context.Context, req CollectingRequest) error {
+func (c *Collector) Collect(ctx context.Context, req CollectingRequest) error {
 	var err error
-	fileList, err := c.DriveClient.GetFileList(ctx, req.Folder, req.PageToken)
+	fileList, err := c.DriveClient.GetFileList(ctx, req.Folder, req.PageToken, []string{
+		"nextPageToken",
+		"incompleteSearch",
+		"files(" + getFileFileds() + ")",
+	})
+
 	if err != nil {
 		return err
 	}
@@ -84,4 +89,22 @@ func (c *Collector) collect(ctx context.Context, req CollectingRequest) error {
 	}
 
 	return err
+}
+
+func getFileFileds() string {
+	return strings.Join([]string{
+		"id",
+		"name",
+		"mimeType",
+		"description",
+		"parents",
+		"properties",
+		"version",
+		"thumbnailLink",
+		"createdTime",
+		"modifiedTime",
+		"lastModifyingUser",
+		"fullFileExtension",
+		"size",
+	}, ", ")
 }
