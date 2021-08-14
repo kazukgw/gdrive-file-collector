@@ -2,8 +2,9 @@ package main
 
 import (
 	"context"
-	"time"
+	"encoding/json"
 	"fmt"
+	"time"
 
 	cloudtasks "cloud.google.com/go/cloudtasks/apiv2"
 	"github.com/google/uuid"
@@ -14,34 +15,23 @@ import (
 type CollectingRequest struct {
 	ID                      string
 	RootCollectingRequestID string
-	Folder                  *drive.File
+	FolderID                string
+	Folder                  *drive.File `json:"-"`
 	PageToken               string
 	CreatedTime             time.Time
 }
 
-func (req *CollectingRequest) UnmarshalJSON(b []byte) error {
-	return nil
-}
-
-func (req CollectingRequest) MarshalJSON() ([]byte, error) {
-	return []byte{}, nil
-}
-
 func NewCollectingRequest(
 	rootReqID string,
-	folder *drive.File,
-	nextPageToken string,
+	f *drive.File,
+	pageToken string,
 ) CollectingRequest {
-	id := uuid.NewString()
-	rootReqID_ := rootReqID
-	if rootReqID_ == "" {
-		rootReqID_ = id
-	}
 	return CollectingRequest{
-		id,
-		rootReqID_,
-		folder,
-		nextPageToken,
+		uuid.NewString(),
+		rootReqID,
+		f.Id,
+		f,
+		pageToken,
 		time.Now(),
 	}
 }
@@ -65,6 +55,13 @@ func NewCollectingRequestQueueClient(
 }
 
 func (cli *CollectingRequestQueueClient) Push(ctx context.Context, req CollectingRequest) (*taskspb.Task, error) {
+	if req.FolderID == "" {
+		req.FolderID = req.Folder.Id
+	}
+	jsondata, err := json.Marshal(req)
+	if err != nil {
+		return nil, err
+	}
 	taskreq := &taskspb.CreateTaskRequest{
 		Parent: cli.QueuePath,
 		Task: &taskspb.Task{
@@ -73,7 +70,7 @@ func (cli *CollectingRequestQueueClient) Push(ctx context.Context, req Collectin
 				HttpRequest: &taskspb.HttpRequest{
 					HttpMethod: taskspb.HttpMethod_POST,
 					Url:        cli.HTTPTargetURL,
-					Body: json.Marshal(req),
+					Body:       jsondata,
 				},
 			},
 		},
